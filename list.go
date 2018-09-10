@@ -2,6 +2,7 @@ package tview
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/gdamore/tcell"
 )
@@ -18,6 +19,8 @@ type listItem struct {
 //
 // See https://github.com/rivo/tview/wiki/List for an example.
 type List struct {
+	sync.RWMutex
+
 	*Box
 
 	// The items of the list.
@@ -202,6 +205,9 @@ func (l *List) Clear() *List {
 
 // Draw draws this primitive onto the screen.
 func (l *List) Draw(screen tcell.Screen) {
+	l.Lock()
+	defer l.Unlock()
+
 	l.Box.Draw(screen)
 
 	// Determine the dimensions.

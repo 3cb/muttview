@@ -2,6 +2,7 @@ package tview
 
 import (
 	"sort"
+	"sync"
 
 	"github.com/gdamore/tcell"
 	colorful "github.com/lucasb-eyer/go-colorful"
@@ -194,6 +195,8 @@ func (c *TableCell) GetLastPosition() (x, y, width int) {
 //
 // See https://github.com/rivo/tview/wiki/Table for an example.
 type Table struct {
+	sync.RWMutex
+
 	*Box
 
 	// Whether or not this table has borders around each cell.
@@ -451,6 +454,9 @@ func (t *Table) ScrollToEnd() *Table {
 
 // Draw draws this primitive onto the screen.
 func (t *Table) Draw(screen tcell.Screen) {
+	t.Lock()
+	defer t.Unlock()
+
 	t.Box.Draw(screen)
 
 	// What's our available screen space?
