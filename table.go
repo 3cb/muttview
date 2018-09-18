@@ -12,6 +12,8 @@ import (
 // directly but all colors (background and text) will be set to their default
 // which is black.
 type TableCell struct {
+	sync.RWMutex
+
 	// The text to be displayed in the table cell.
 	Text string
 
@@ -58,6 +60,9 @@ func NewTableCell(text string) *TableCell {
 
 // SetText sets the cell's text.
 func (c *TableCell) SetText(text string) *TableCell {
+	c.Lock()
+	defer c.Unlock()
+
 	c.Text = text
 	return c
 }
@@ -100,6 +105,9 @@ func (c *TableCell) SetExpansion(expansion int) *TableCell {
 
 // SetTextColor sets the cell's text color.
 func (c *TableCell) SetTextColor(color tcell.Color) *TableCell {
+	c.Lock()
+	defer c.Unlock()
+
 	c.Color = color
 	return c
 }
@@ -116,6 +124,9 @@ func (c *TableCell) SetBackgroundColor(color tcell.Color) *TableCell {
 //
 //   cell.SetAttributes(tcell.AttrUnderline | tcell.AttrBold)
 func (c *TableCell) SetAttributes(attr tcell.AttrMask) *TableCell {
+	c.Lock()
+	defer c.Unlock()
+
 	c.Attributes = attr
 	return c
 }
@@ -428,6 +439,9 @@ func (t *Table) SetCellSimple(row, column int, text string) *Table {
 // TableCell object is always returns but it will be uninitialized if the cell
 // was not previously set.
 func (t *Table) GetCell(row, column int) *TableCell {
+	t.Lock()
+	defer t.Unlock()
+
 	if row >= len(t.cells) || column >= len(t.cells[row]) {
 		return &TableCell{}
 	}
@@ -631,6 +645,7 @@ ColumnLoop:
 		expansion := 0
 		for _, row := range rows {
 			if cell := getCell(row, column); cell != nil {
+				cell.RLock()
 				_, _, _, _, cellWidth := decomposeString(cell.Text)
 				if cell.MaxWidth > 0 && cell.MaxWidth < cellWidth {
 					cellWidth = cell.MaxWidth
@@ -641,6 +656,7 @@ ColumnLoop:
 				if cell.Expansion > expansion {
 					expansion = cell.Expansion
 				}
+				cell.RUnlock()
 			}
 		}
 		if maxWidth < 0 {
@@ -723,12 +739,14 @@ ColumnLoop:
 			if columnX+1+columnWidth >= width {
 				finalWidth = width - columnX - 1
 			}
+			cell.Lock()
 			cell.x, cell.y, cell.width = x+columnX+1, y+rowY, finalWidth
 			_, printed := printWithStyle(screen, cell.Text, x+columnX+1, y+rowY, finalWidth, cell.Align, tcell.StyleDefault.Foreground(cell.Color)|tcell.Style(cell.Attributes))
 			if StringWidth(cell.Text)-printed > 0 && printed > 0 {
 				_, _, style, _ := screen.GetContent(x+columnX+1+finalWidth-1, y+rowY)
 				printWithStyle(screen, string(SemigraphicsHorizontalEllipsis), x+columnX+1+finalWidth-1, y+rowY, 1, AlignLeft, style)
 			}
+			cell.Unlock()
 		}
 
 		// Draw bottom border.
